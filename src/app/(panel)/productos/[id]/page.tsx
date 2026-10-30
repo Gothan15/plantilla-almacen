@@ -37,6 +37,14 @@ export default async function ProductoDetallePage({
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-start gap-3">
+        {producto.foto && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={producto.foto}
+            alt={`Foto de ${producto.nombre}`}
+            className="h-20 w-20 shrink-0 rounded-lg border border-borde object-cover"
+          />
+        )}
         <div className="min-w-0 flex-1">
           <p className="font-mono text-xs tracking-widest text-tinta-suave">
             {producto.sku} · {producto.categoria.nombre.toUpperCase()}
@@ -46,6 +54,12 @@ export default async function ProductoDetallePage({
             <p className="mt-0.5 max-w-xl text-sm text-tinta-suave">{producto.descripcion}</p>
           )}
         </div>
+        <Link
+          href={`/productos/${producto.id}/etiqueta`}
+          className="rounded-md bg-ambar px-4 py-2 text-sm font-bold text-white transition hover:brightness-110"
+        >
+          ⌑ Imprimir etiqueta
+        </Link>
         <Link href={`/productos/${producto.id}/editar`} className={claseBotonSecundario}>
           Editar
         </Link>

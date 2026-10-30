@@ -34,6 +34,7 @@ export type ProductoEscaneado = {
   id: number;
   sku: string;
   codigoBarras: string | null;
+  foto: string | null;
   nombre: string;
   categoria: string;
   proveedor: string | null;
@@ -246,14 +247,26 @@ function FichaProducto({
   return (
     <section className="mt-5 overflow-hidden rounded-lg border border-borde bg-white">
       <div className="border-b border-borde bg-papel px-4 py-3">
-        <p className="font-mono text-[11px] tracking-widest text-tinta-suave">
-          {producto.sku}
-          {producto.codigoBarras ? ` · EAN ${producto.codigoBarras}` : ""} ·{" "}
-          {producto.categoria.toUpperCase()}
-        </p>
-        <h2 className="mt-0.5 text-lg leading-snug font-bold">
-          {producto.nombre}
-        </h2>
+        <div className="flex items-start gap-3">
+          {producto.foto && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={producto.foto}
+              alt=""
+              className="h-14 w-14 shrink-0 rounded-md border border-borde object-cover"
+            />
+          )}
+          <div className="min-w-0">
+            <p className="font-mono text-[11px] tracking-widest text-tinta-suave">
+              {producto.sku}
+              {producto.codigoBarras ? ` · EAN ${producto.codigoBarras}` : ""} ·{" "}
+              {producto.categoria.toUpperCase()}
+            </p>
+            <h2 className="mt-0.5 text-lg leading-snug font-bold">
+              {producto.nombre}
+            </h2>
+          </div>
+        </div>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <span className="font-mono text-2xl font-bold">
             {producto.existencia}{" "}
@@ -269,12 +282,17 @@ function FichaProducto({
             mín. {producto.stockMinimo}
             {producto.ubicacion ? ` · ubicación ${producto.ubicacion}` : ""}
           </span>
-          <Link
-            href={`/productos/${producto.id}`}
-            className="ml-auto text-sm font-semibold text-ambar hover:underline"
-          >
-            Ver ficha completa
-          </Link>
+          <span className="ml-auto flex gap-3 text-sm font-semibold text-ambar">
+            <Link
+              href={`/productos/${producto.id}/etiqueta`}
+              className="hover:underline"
+            >
+              ⌑ Etiqueta
+            </Link>
+            <Link href={`/productos/${producto.id}`} className="hover:underline">
+              Ver ficha completa
+            </Link>
+          </span>
         </div>
       </div>
 

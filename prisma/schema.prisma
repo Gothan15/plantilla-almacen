@@ -61,6 +61,7 @@ model Producto {
   id          Int      @id @default(autoincrement())
   sku         String   @unique // código interno, ej. ALM-001
   codigoBarras String? @unique // EAN/UPC de fábrica, para el escáner
+  foto        String? // foto como data URL (JPEG reducido); en producción, un almacén de objetos
   nombre      String
   descripcion String?
   categoriaId Int

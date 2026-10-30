@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
 import type { FormState } from "@/app/actions/productos";
 import { claseBotonPrincipal, claseBotonSecundario, claseInput, claseLabel } from "./ui";
@@ -10,6 +10,7 @@ type Opcion = { id: number; nombre: string };
 export type ProductoInicial = {
   sku: string;
   codigoBarras?: string | null;
+  foto?: string | null;
   nombre: string;
   descripcion: string | null;
   categoriaId: number;
@@ -71,6 +72,8 @@ export default function ProductoForm({
           />
         </div>
       </div>
+
+      <CampoFoto inicial={inicial?.foto ?? null} />
 
       <div>
         <label htmlFor="codigoBarras" className={claseLabel}>
@@ -259,5 +262,88 @@ export default function ProductoForm({
         </Link>
       </div>
     </form>
+  );
+}
+
+// Foto del producto: se reduce en el navegador (máx. 720 px, JPEG) y
+// viaja como data URL en un campo oculto. Sin servicios externos: la
+// plantilla se basta sola. Para un cliente grande, este es el punto
+// donde se cambiaría por un almacén de objetos.
+function CampoFoto({ inicial }: { inicial: string | null }) {
+  const [foto, setFoto] = useState<string>(inicial ?? "");
+  const [procesando, setProcesando] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function alElegir(e: React.ChangeEvent<HTMLInputElement>) {
+    const archivo = e.target.files?.[0];
+    if (!archivo) return;
+    setProcesando(true);
+    const lector = new FileReader();
+    lector.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 720;
+        const escala = Math.min(1, MAX / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * escala);
+        canvas.height = Math.round(img.height * escala);
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setFoto(canvas.toDataURL("image/jpeg", 0.82));
+        setProcesando(false);
+      };
+      img.src = String(lector.result);
+    };
+    lector.readAsDataURL(archivo);
+  }
+
+  return (
+    <div>
+      <span className={claseLabel}>Foto del producto</span>
+      <input type="hidden" name="foto" value={foto} />
+      <div className="flex items-center gap-3">
+        {foto ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={foto}
+            alt="Foto del producto"
+            className="h-20 w-20 rounded-md border border-borde object-cover"
+          />
+        ) : (
+          <div className="flex h-20 w-20 items-center justify-center rounded-md border border-dashed border-borde bg-papel text-2xl text-tinta-suave">
+            ▦
+          </div>
+        )}
+        <div className="flex flex-col items-start gap-1.5">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className={claseBotonSecundario}
+          >
+            {procesando ? "Procesando..." : foto ? "Cambiar foto" : "Subir foto"}
+          </button>
+          {foto && (
+            <button
+              type="button"
+              onClick={() => setFoto("")}
+              className="text-xs font-semibold text-rojo hover:underline"
+            >
+              Quitar foto
+            </button>
+          )}
+          <p className="text-xs text-tinta-suave">
+            Se reduce sola a 720 px; sirve la de la cámara del teléfono.
+          </p>
+        </div>
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        onChange={alElegir}
+        className="hidden"
+        aria-label="Subir foto del producto"
+      />
+    </div>
   );
 }

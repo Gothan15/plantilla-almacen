@@ -8,10 +8,16 @@ import { verifySession } from "@/lib/dal";
 export type FormState = { error?: string } | undefined;
 
 function leerDatos(formData: FormData) {
+  const fotoCruda = String(formData.get("foto") ?? "").trim();
   return {
     sku: String(formData.get("sku") ?? "").trim().toUpperCase(),
     codigoBarras:
       String(formData.get("codigoBarras") ?? "").trim() || null,
+    // Solo se acepta una imagen data URL de tamaño razonable (≈500 KB).
+    foto:
+      fotoCruda.startsWith("data:image/") && fotoCruda.length <= 700_000
+        ? fotoCruda
+        : null,
     nombre: String(formData.get("nombre") ?? "").trim(),
     descripcion: String(formData.get("descripcion") ?? "").trim() || null,
     categoriaId: Number(formData.get("categoriaId")),

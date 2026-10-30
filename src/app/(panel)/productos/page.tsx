@@ -98,12 +98,28 @@ export default async function ProductosPage({
               <tr key={p.id} className={`hover:bg-papel ${p.activo ? "" : "opacity-50"}`}>
                 <td className="px-4 py-2.5 font-mono text-xs">{p.sku}</td>
                 <td className="px-4 py-2.5">
-                  <Link href={`/productos/${p.id}`} className="font-medium hover:underline">
-                    {p.nombre}
-                  </Link>
-                  {p.proveedor && (
-                    <span className="block text-xs text-tinta-suave">{p.proveedor.nombre}</span>
-                  )}
+                  <div className="flex items-center gap-2.5">
+                    {p.foto ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.foto}
+                        alt=""
+                        className="h-9 w-9 shrink-0 rounded border border-borde object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-dashed border-borde bg-papel text-xs text-tinta-suave">
+                        ▦
+                      </span>
+                    )}
+                    <span className="min-w-0">
+                      <Link href={`/productos/${p.id}`} className="font-medium hover:underline">
+                        {p.nombre}
+                      </Link>
+                      {p.proveedor && (
+                        <span className="block text-xs text-tinta-suave">{p.proveedor.nombre}</span>
+                      )}
+                    </span>
+                  </div>
                 </td>
                 <td className="px-4 py-2.5">{p.categoria.nombre}</td>
                 <td className="px-4 py-2.5 font-mono text-xs">{p.ubicacion ?? "—"}</td>

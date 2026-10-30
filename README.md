@@ -31,6 +31,16 @@ cuadrar el almacén contra el papel, el libro está aquí.
   o con pistola USB, muestra la ficha y registra entrada, salida o
   conteo físico sin salir de la pantalla. Si el código no existe,
   ofrece crear el producto con el código ya puesto.
+- **Foto por producto**: se sube desde el formulario y se reduce en
+  el navegador a 720 px (JPEG) antes de guardarse; aparece en la
+  lista, la ficha y la pantalla de escaneo. Se guarda como data URL
+  en la base para que la plantilla no dependa de ningún servicio
+  externo; en un despliegue grande, este es el punto donde se
+  cambiaría por un almacén de objetos.
+- **Etiquetas imprimibles**: desde la ficha, una hoja de etiquetas
+  de 70 × 40 mm con nombre del negocio, producto, precio y el código
+  de barras dibujado (el EAN de fábrica si lo trae; si no, un Code128
+  con el SKU que el propio escáner sabe leer).
 - **App Android compañera** (carpeta `movil/`): envoltura Capacitor
   de esta misma web con escáner ML Kit nativo; se compila en un APK
   instalable sin Play Store. Instrucciones en `movil/README.md`.

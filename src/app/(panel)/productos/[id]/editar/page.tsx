@@ -28,6 +28,7 @@ export default async function EditarProductoPage({
         inicial={{
           sku: producto.sku,
           codigoBarras: producto.codigoBarras,
+          foto: producto.foto,
           nombre: producto.nombre,
           descripcion: producto.descripcion,
           categoriaId: producto.categoriaId,

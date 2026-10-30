@@ -25,6 +25,7 @@ export async function GET(req: Request) {
       id: producto.id,
       sku: producto.sku,
       codigoBarras: producto.codigoBarras,
+      foto: producto.foto,
       nombre: producto.nombre,
       categoria: producto.categoria.nombre,
       proveedor: producto.proveedor?.nombre ?? null,
