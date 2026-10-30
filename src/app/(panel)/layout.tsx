@@ -5,6 +5,7 @@ import { CONFIG } from "@/lib/config";
 
 const ENLACES = [
   { href: "/panel", texto: "Panel", icono: "▦" },
+  { href: "/escanear", texto: "Escanear", icono: "▣" },
   { href: "/productos", texto: "Productos", icono: "▤" },
   { href: "/movimientos", texto: "Movimientos", icono: "⇄" },
   { href: "/categorias", texto: "Categorías", icono: "❏" },

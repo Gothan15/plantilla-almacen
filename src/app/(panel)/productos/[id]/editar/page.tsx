@@ -27,6 +27,7 @@ export default async function EditarProductoPage({
         proveedores={proveedores}
         inicial={{
           sku: producto.sku,
+          codigoBarras: producto.codigoBarras,
           nombre: producto.nombre,
           descripcion: producto.descripcion,
           categoriaId: producto.categoriaId,

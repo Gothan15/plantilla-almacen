@@ -21,10 +21,19 @@ cuadrar el almacén contra el papel, el libro está aquí.
   stock mínimo con acceso directo a registrar su entrada, cifras
   generales, flujo de entradas/salidas de los últimos 7 días y los
   últimos movimientos.
-- **Productos**: código SKU, categoría, proveedor habitual, unidad
-  (u, kg, caja, saco...), ubicación en el almacén, precios de costo
-  y venta, stock mínimo. Búsqueda por nombre o código y filtros por
+- **Productos**: código SKU y **código de barras de fábrica (EAN)**,
+  categoría, proveedor habitual, unidad (u, kg, caja, saco...),
+  ubicación en el almacén, precios de costo y venta, stock mínimo.
+  Búsqueda por nombre, SKU o código de barras, y filtros por
   categoría y estado de stock.
+- **Página de escaneo** (`/escanear`): lee el código con la cámara
+  (BarcodeDetector en Chrome/Android, ML Kit dentro de la app móvil)
+  o con pistola USB, muestra la ficha y registra entrada, salida o
+  conteo físico sin salir de la pantalla. Si el código no existe,
+  ofrece crear el producto con el código ya puesto.
+- **App Android compañera** (carpeta `movil/`): envoltura Capacitor
+  de esta misma web con escáner ML Kit nativo; se compila en un APK
+  instalable sin Play Store. Instrucciones en `movil/README.md`.
 - **Libro de movimientos**: entradas, salidas y ajustes por conteo
   físico. El ajuste pide la existencia real contada y el sistema
   calcula y registra la diferencia. Folio correlativo en todo.
@@ -80,9 +89,8 @@ panel son CSS.
 
 ## Lo que falta (siendo honesto)
 
-- No tiene lector de códigos de barras; el SKU se escribe a mano.
-  La estructura lo admite: sería un campo más en el formulario de
-  movimientos.
+- La app móvil necesita conexión con el servidor (WiFi o internet);
+  el modo sin conexión con cola de movimientos queda para la v2.
 - No lleva control por lotes ni fechas de vencimiento; para
   alimentos perecederos habría que añadir el modelo Lote.
 - Los reportes son del mes en curso; un selector de rango de fechas

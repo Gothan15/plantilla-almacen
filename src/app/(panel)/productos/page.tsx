@@ -19,6 +19,7 @@ export default async function ProductosPage({
               OR: [
                 { nombre: { contains: q, mode: "insensitive" } },
                 { sku: { contains: q.toUpperCase() } },
+                { codigoBarras: { contains: q } },
               ],
             }
           : {}),

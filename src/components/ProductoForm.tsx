@@ -9,6 +9,7 @@ type Opcion = { id: number; nombre: string };
 
 export type ProductoInicial = {
   sku: string;
+  codigoBarras?: string | null;
   nombre: string;
   descripcion: string | null;
   categoriaId: number;
@@ -29,12 +30,14 @@ export default function ProductoForm({
   categorias,
   proveedores,
   esEdicion = false,
+  codigoBarrasInicial,
 }: {
   accion: (prev: FormState, data: FormData) => Promise<FormState>;
   inicial?: ProductoInicial;
   categorias: Opcion[];
   proveedores: Opcion[];
   esEdicion?: boolean;
+  codigoBarrasInicial?: string;
 }) {
   const [state, dispatch, pending] = useActionState(accion, undefined);
 
@@ -67,6 +70,24 @@ export default function ProductoForm({
             className={claseInput}
           />
         </div>
+      </div>
+
+      <div>
+        <label htmlFor="codigoBarras" className={claseLabel}>
+          Código de barras (EAN)
+        </label>
+        <input
+          id="codigoBarras"
+          name="codigoBarras"
+          inputMode="numeric"
+          defaultValue={inicial?.codigoBarras ?? codigoBarrasInicial ?? ""}
+          placeholder="Ej. 7501031311309 — el que trae el producto de fábrica"
+          className={`${claseInput} font-mono`}
+        />
+        <p className="mt-1 text-xs text-tinta-suave">
+          Con este código la app móvil y las pistolas de escáner encuentran el
+          producto sin escribir nada.
+        </p>
       </div>
 
       <div>

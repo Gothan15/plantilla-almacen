@@ -60,6 +60,7 @@ model Proveedor {
 model Producto {
   id          Int      @id @default(autoincrement())
   sku         String   @unique // código interno, ej. ALM-001
+  codigoBarras String? @unique // EAN/UPC de fábrica, para el escáner
   nombre      String
   descripcion String?
   categoriaId Int

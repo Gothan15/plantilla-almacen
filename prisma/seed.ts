@@ -65,6 +65,7 @@ async function main() {
 
   type Prod = {
     sku: string;
+    ean?: string;
     nombre: string;
     categoria: string;
     proveedor: string;
@@ -76,18 +77,18 @@ async function main() {
   };
   const productosDatos: Prod[] = [
     { sku: "ALM-001", nombre: "Arroz blanco, saco de 25 kg", categoria: "Alimentos", proveedor: "Distribuidora Caribe", unidad: "saco", costo: 4200, venta: 4800, minimo: 5, ubicacion: "A-1" },
-    { sku: "ALM-002", nombre: "Aceite vegetal 1 L", categoria: "Alimentos", proveedor: "Distribuidora Caribe", unidad: "u", costo: 850, venta: 980, minimo: 24, ubicacion: "A-2" },
+    { sku: "ALM-002", ean: "7501031311309", nombre: "Aceite vegetal 1 L", categoria: "Alimentos", proveedor: "Distribuidora Caribe", unidad: "u", costo: 850, venta: 980, minimo: 24, ubicacion: "A-2" },
     { sku: "ALM-003", nombre: "Azúcar refino, saco de 25 kg", categoria: "Alimentos", proveedor: "Suministros Habana S.R.L.", unidad: "saco", costo: 3900, venta: 4500, minimo: 4, ubicacion: "A-1" },
-    { sku: "ALM-004", nombre: "Café molido 500 g", categoria: "Alimentos", proveedor: "Suministros Habana S.R.L.", unidad: "paquete", costo: 620, venta: 750, minimo: 20, ubicacion: "A-3" },
-    { sku: "ALM-005", nombre: "Leche en polvo 1 kg", categoria: "Alimentos", proveedor: "Distribuidora Caribe", unidad: "paquete", costo: 1450, venta: 1680, minimo: 12, ubicacion: "A-3" },
-    { sku: "BEB-001", nombre: "Refresco de cola 1,5 L (caja x 6)", categoria: "Bebidas", proveedor: "Mayorista El Puente", unidad: "caja", costo: 1560, venta: 1800, minimo: 6, ubicacion: "B-1" },
-    { sku: "BEB-002", nombre: "Agua mineral 500 mL (caja x 12)", categoria: "Bebidas", proveedor: "Mayorista El Puente", unidad: "caja", costo: 720, venta: 900, minimo: 8, ubicacion: "B-1" },
-    { sku: "LIM-001", nombre: "Detergente en polvo 1 kg", categoria: "Limpieza e higiene", proveedor: "Suministros Habana S.R.L.", unidad: "paquete", costo: 480, venta: 560, minimo: 15, ubicacion: "C-2" },
-    { sku: "LIM-002", nombre: "Jabón de baño 100 g", categoria: "Limpieza e higiene", proveedor: "Distribuidora Caribe", unidad: "u", costo: 120, venta: 150, minimo: 30, ubicacion: "C-1" },
-    { sku: "LIM-003", nombre: "Lejía 1 L", categoria: "Limpieza e higiene", proveedor: "Mayorista El Puente", unidad: "u", costo: 210, venta: 260, minimo: 12, ubicacion: "C-2" },
-    { sku: "FER-001", nombre: "Bombillo LED 9 W", categoria: "Ferretería ligera", proveedor: "Comercial Vega", unidad: "u", costo: 340, venta: 420, minimo: 10, ubicacion: "D-1" },
+    { sku: "ALM-004", ean: "7501000911305", nombre: "Café molido 500 g", categoria: "Alimentos", proveedor: "Suministros Habana S.R.L.", unidad: "paquete", costo: 620, venta: 750, minimo: 20, ubicacion: "A-3" },
+    { sku: "ALM-005", ean: "8410128001074", nombre: "Leche en polvo 1 kg", categoria: "Alimentos", proveedor: "Distribuidora Caribe", unidad: "paquete", costo: 1450, venta: 1680, minimo: 12, ubicacion: "A-3" },
+    { sku: "BEB-001", ean: "7501055362939", nombre: "Refresco de cola 1,5 L (caja x 6)", categoria: "Bebidas", proveedor: "Mayorista El Puente", unidad: "caja", costo: 1560, venta: 1800, minimo: 6, ubicacion: "B-1" },
+    { sku: "BEB-002", ean: "5601000012345", nombre: "Agua mineral 500 mL (caja x 12)", categoria: "Bebidas", proveedor: "Mayorista El Puente", unidad: "caja", costo: 720, venta: 900, minimo: 8, ubicacion: "B-1" },
+    { sku: "LIM-001", ean: "7501000020011", nombre: "Detergente en polvo 1 kg", categoria: "Limpieza e higiene", proveedor: "Suministros Habana S.R.L.", unidad: "paquete", costo: 480, venta: 560, minimo: 15, ubicacion: "C-2" },
+    { sku: "LIM-002", ean: "7501000911450", nombre: "Jabón de baño 100 g", categoria: "Limpieza e higiene", proveedor: "Distribuidora Caribe", unidad: "u", costo: 120, venta: 150, minimo: 30, ubicacion: "C-1" },
+    { sku: "LIM-003", ean: "7501031311453", nombre: "Lejía 1 L", categoria: "Limpieza e higiene", proveedor: "Mayorista El Puente", unidad: "u", costo: 210, venta: 260, minimo: 12, ubicacion: "C-2" },
+    { sku: "FER-001", ean: "4052899001234", nombre: "Bombillo LED 9 W", categoria: "Ferretería ligera", proveedor: "Comercial Vega", unidad: "u", costo: 340, venta: 420, minimo: 10, ubicacion: "D-1" },
     { sku: "FER-002", nombre: "Cinta aislante, rollo de 10 m", categoria: "Ferretería ligera", proveedor: "Comercial Vega", unidad: "rollo", costo: 95, venta: 130, minimo: 20, ubicacion: "D-1" },
-    { sku: "PAP-001", nombre: "Papel bond A4, resma de 500", categoria: "Útiles y papelería", proveedor: "Comercial Vega", unidad: "paquete", costo: 1100, venta: 1350, minimo: 6, ubicacion: "D-2" },
+    { sku: "PAP-001", ean: "7501000911993", nombre: "Papel bond A4, resma de 500", categoria: "Útiles y papelería", proveedor: "Comercial Vega", unidad: "paquete", costo: 1100, venta: 1350, minimo: 6, ubicacion: "D-2" },
   ];
 
   const productos: Record<string, { id: number }> = {};
@@ -97,6 +98,7 @@ async function main() {
       update: {},
       create: {
         sku: p.sku,
+        codigoBarras: p.ean ?? null,
         nombre: p.nombre,
         categoriaId: categorias[p.categoria].id,
         proveedorId: proveedores[p.proveedor].id,

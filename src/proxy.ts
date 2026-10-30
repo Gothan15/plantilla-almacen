@@ -7,6 +7,7 @@ import { decrypt } from "@/lib/sesion-core";
 // comprobación segura de verdad está en el DAL (lib/dal.ts).
 const RUTAS_PROTEGIDAS = [
   "/panel",
+  "/escanear",
   "/productos",
   "/movimientos",
   "/categorias",

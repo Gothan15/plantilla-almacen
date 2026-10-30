@@ -84,6 +84,12 @@ export default async function PanelPage() {
             Esto es lo que necesita atención en el almacén hoy.
           </p>
         </div>
+        <Link
+          href="/escanear"
+          className="rounded-md bg-ambar px-4 py-2 text-sm font-bold text-white transition hover:brightness-110"
+        >
+          ▣ Escanear
+        </Link>
         <Link href="/movimientos/nuevo" className={claseBotonPrincipal}>
           + Registrar movimiento
         </Link>

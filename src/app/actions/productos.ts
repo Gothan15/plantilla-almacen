@@ -10,6 +10,8 @@ export type FormState = { error?: string } | undefined;
 function leerDatos(formData: FormData) {
   return {
     sku: String(formData.get("sku") ?? "").trim().toUpperCase(),
+    codigoBarras:
+      String(formData.get("codigoBarras") ?? "").trim() || null,
     nombre: String(formData.get("nombre") ?? "").trim(),
     descripcion: String(formData.get("descripcion") ?? "").trim() || null,
     categoriaId: Number(formData.get("categoriaId")),
@@ -42,6 +44,14 @@ export async function crearProducto(
 
   const existe = await prisma.producto.findUnique({ where: { sku: d.sku } });
   if (existe) return { error: `Ya hay un producto con el código ${d.sku}.` };
+
+  if (d.codigoBarras) {
+    const conEse = await prisma.producto.findUnique({
+      where: { codigoBarras: d.codigoBarras },
+    });
+    if (conEse)
+      return { error: `El código de barras ya pertenece a ${conEse.nombre}.` };
+  }
 
   // La existencia inicial entra como primer movimiento del libro,
   // para que el historial cuadre desde el primer día.
@@ -88,6 +98,14 @@ export async function actualizarProducto(
     where: { sku: d.sku, NOT: { id } },
   });
   if (choque) return { error: `Ya hay un producto con el código ${d.sku}.` };
+
+  if (d.codigoBarras) {
+    const conEse = await prisma.producto.findFirst({
+      where: { codigoBarras: d.codigoBarras, NOT: { id } },
+    });
+    if (conEse)
+      return { error: `El código de barras ya pertenece a ${conEse.nombre}.` };
+  }
 
   await prisma.producto.update({ where: { id }, data: d });
   revalidatePath("/productos");
