@@ -16,10 +16,10 @@ export default async function ProductoDetallePage({
   const productoId = Number(id);
   const usuario = await getUsuarioActual();
 
-  const [producto, movimientos, proveedores] = await Promise.all([
+  const [producto, movimientos, proveedores, almacenes] = await Promise.all([
     prisma.producto.findUnique({
       where: { id: productoId },
-      include: { categoria: true, proveedor: true },
+      include: { categoria: true, proveedor: true, almacen: true },
     }),
     prisma.movimiento.findMany({
       where: { productoId },
@@ -28,6 +28,11 @@ export default async function ProductoDetallePage({
       include: { usuario: true, proveedor: true },
     }),
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
+    prisma.almacen.findMany({
+      where: { activo: true },
+      orderBy: { nombre: "asc" },
+      select: { id: true, nombre: true },
+    }),
   ]);
 
   if (!producto) notFound();
@@ -47,7 +52,8 @@ export default async function ProductoDetallePage({
         )}
         <div className="min-w-0 flex-1">
           <p className="font-mono text-xs tracking-widest text-tinta-suave">
-            {producto.sku} · {producto.categoria.nombre.toUpperCase()}
+            {producto.sku} · {producto.categoria.nombre.toUpperCase()} ·{" "}
+            {producto.almacen.nombre.toUpperCase()}
           </p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight">{producto.nombre}</h1>
           {producto.descripcion && (
@@ -109,12 +115,15 @@ export default async function ProductoDetallePage({
             <MovimientoForm
               productos={[]}
               proveedores={proveedores}
+              almacenes={almacenes}
               productoFijo={{
                 id: producto.id,
                 sku: producto.sku,
                 nombre: producto.nombre,
                 unidad: producto.unidad,
                 existencia: producto.existencia,
+                almacenId: producto.almacenId,
+                almacenNombre: producto.almacen.nombre,
               }}
               volver="producto"
             />

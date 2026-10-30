@@ -2,9 +2,10 @@ import { cookies } from "next/headers";
 import { decrypt } from "@/lib/sesion-core";
 import { prisma } from "@/lib/prisma";
 
-// Busca un producto por su código de barras (o por su SKU interno).
-// Lo usa la página de escaneo, tanto en el navegador como en la app
-// móvil. Exige sesión: sin cookie válida responde 401.
+// Busca productos por código de barras (o SKU interno). Lo usa la
+// página de escaneo, en el navegador y en la app móvil. Desde la v2
+// devuelve TODAS las coincidencias: el mismo código puede existir en
+// varios almacenes y quien escanea elige el suyo. Exige sesión.
 export async function GET(req: Request) {
   const token = (await cookies()).get("sesion")?.value;
   const sesion = await decrypt(token);
@@ -13,29 +14,30 @@ export async function GET(req: Request) {
   const codigo = new URL(req.url).searchParams.get("codigo")?.trim();
   if (!codigo) return Response.json({ error: "Falta el código" }, { status: 400 });
 
-  const producto = await prisma.producto.findFirst({
+  const productos = await prisma.producto.findMany({
     where: { OR: [{ codigoBarras: codigo }, { sku: codigo.toUpperCase() }] },
-    include: { categoria: true, proveedor: true },
+    include: { categoria: true, proveedor: true, almacen: true },
+    orderBy: { almacenId: "asc" },
   });
 
-  if (!producto) return Response.json({ producto: null });
-
   return Response.json({
-    producto: {
-      id: producto.id,
-      sku: producto.sku,
-      codigoBarras: producto.codigoBarras,
-      foto: producto.foto,
-      nombre: producto.nombre,
-      categoria: producto.categoria.nombre,
-      proveedor: producto.proveedor?.nombre ?? null,
-      unidad: producto.unidad,
-      existencia: producto.existencia,
-      stockMinimo: producto.stockMinimo,
-      ubicacion: producto.ubicacion,
-      activo: producto.activo,
-      precioCosto: producto.precioCosto.toString(),
-      precioVenta: producto.precioVenta.toString(),
-    },
+    productos: productos.map((p) => ({
+      id: p.id,
+      sku: p.sku,
+      codigoBarras: p.codigoBarras,
+      foto: p.foto,
+      nombre: p.nombre,
+      categoria: p.categoria.nombre,
+      proveedor: p.proveedor?.nombre ?? null,
+      almacenId: p.almacenId,
+      almacenNombre: p.almacen.nombre,
+      unidad: p.unidad,
+      existencia: p.existencia,
+      stockMinimo: p.stockMinimo,
+      ubicacion: p.ubicacion,
+      activo: p.activo,
+      precioCosto: p.precioCosto.toString(),
+      precioVenta: p.precioVenta.toString(),
+    })),
   });
 }

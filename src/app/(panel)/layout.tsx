@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { getUsuarioActual } from "@/lib/dal";
+import { almacenActualId } from "@/lib/almacen-actual";
+import { prisma } from "@/lib/prisma";
 import { logout } from "@/app/actions/auth";
 import { CONFIG } from "@/lib/config";
+import SelectorAlmacen from "@/components/SelectorAlmacen";
 
 const ENLACES = [
   { href: "/panel", texto: "Panel", icono: "▦" },
   { href: "/escanear", texto: "Escanear", icono: "▣" },
   { href: "/productos", texto: "Productos", icono: "▤" },
   { href: "/movimientos", texto: "Movimientos", icono: "⇄" },
+  { href: "/ordenes", texto: "Órdenes", icono: "▧" },
   { href: "/categorias", texto: "Categorías", icono: "❏" },
   { href: "/proveedores", texto: "Proveedores", icono: "⚲" },
   { href: "/reportes", texto: "Reportes", icono: "▨" },
@@ -19,9 +23,21 @@ export default async function PanelLayout({
   children: React.ReactNode;
 }) {
   const usuario = await getUsuarioActual();
+  const [almacenes, almacenActual] = await Promise.all([
+    prisma.almacen.findMany({
+      where: { activo: true },
+      orderBy: { nombre: "asc" },
+      select: { id: true, nombre: true },
+    }),
+    almacenActualId(),
+  ]);
   const enlaces =
     usuario.rol === "ADMIN"
-      ? [...ENLACES, { href: "/usuarios", texto: "Usuarios", icono: "⚇" }]
+      ? [
+          ...ENLACES,
+          { href: "/almacenes", texto: "Almacenes", icono: "⌂" },
+          { href: "/usuarios", texto: "Usuarios", icono: "⚇" },
+        ]
       : ENLACES;
 
   return (
@@ -39,6 +55,7 @@ export default async function PanelLayout({
               {usuario.nombre} ·{" "}
               {usuario.rol === "ADMIN" ? "Administrador" : "Almacenero"}
             </p>
+            <SelectorAlmacen almacenes={almacenes} actual={almacenActual} />
           </div>
           <form action={logout} className="ml-auto md:hidden">
             <button

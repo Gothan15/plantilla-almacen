@@ -91,12 +91,25 @@ async function main() {
     { sku: "PAP-001", ean: "7501000911993", nombre: "Papel bond A4, resma de 500", categoria: "Útiles y papelería", proveedor: "Comercial Vega", unidad: "paquete", costo: 1100, venta: 1350, minimo: 6, ubicacion: "D-2" },
   ];
 
+  // Dos locales de ejemplo (v2): el principal y un anexo.
+  const almacenPrincipal = await prisma.almacen.upsert({
+    where: { nombre: "Almacén Central" },
+    update: {},
+    create: { nombre: "Almacén Central", descripcion: "Local principal" },
+  });
+  const almacenAnexo = await prisma.almacen.upsert({
+    where: { nombre: "Depósito Anexo" },
+    update: {},
+    create: { nombre: "Depósito Anexo", descripcion: "Depósito de respaldo" },
+  });
+
   const productos: Record<string, { id: number }> = {};
   for (const p of productosDatos) {
     productos[p.sku] = await prisma.producto.upsert({
-      where: { sku: p.sku },
+      where: { almacenId_sku: { almacenId: almacenPrincipal.id, sku: p.sku } },
       update: {},
       create: {
+        almacenId: almacenPrincipal.id,
         sku: p.sku,
         codigoBarras: p.ean ?? null,
         nombre: p.nombre,
@@ -107,6 +120,30 @@ async function main() {
         precioVenta: p.venta,
         stockMinimo: p.minimo,
         ubicacion: p.ubicacion,
+        existencia: 0,
+      },
+    });
+  }
+
+  // El mismo producto en el segundo local: otra ficha, otro stock.
+  const espejos: Record<string, { id: number }> = {};
+  for (const sku of ["ALM-002", "LIM-002"]) {
+    const base = productosDatos.find((x) => x.sku === sku)!;
+    espejos[sku] = await prisma.producto.upsert({
+      where: { almacenId_sku: { almacenId: almacenAnexo.id, sku } },
+      update: {},
+      create: {
+        almacenId: almacenAnexo.id,
+        sku,
+        codigoBarras: base.ean ?? null,
+        nombre: base.nombre,
+        categoriaId: categorias[base.categoria].id,
+        proveedorId: proveedores[base.proveedor].id,
+        unidad: base.unidad,
+        precioCosto: base.costo,
+        precioVenta: base.venta,
+        stockMinimo: base.minimo,
+        ubicacion: "ANX-1",
         existencia: 0,
       },
     });
@@ -127,8 +164,8 @@ async function main() {
       usuarioId: number,
       conProveedor = false
     ) {
-      const prod = await prisma.producto.findUnique({
-        where: { sku },
+      const prod = await prisma.producto.findFirst({
+        where: { sku, almacenId: almacenPrincipal.id },
         select: { id: true, proveedorId: true },
       });
       if (!prod) return;
@@ -195,6 +232,45 @@ async function main() {
     // Hoy
     await registrar("LIM-002", "SALIDA", -15, 0, 9, "Vale de salida para la tienda", J);
     await registrar("ALM-004", "SALIDA", -8, 0, 10, "Pedido de la cafetería El Sol", J);
+
+    // Existencia inicial del Depósito Anexo (aceite y jabón).
+    for (const [sku, cantidad] of [
+      ["ALM-002", 24],
+      ["LIM-002", 50],
+    ] as const) {
+      const espejo = espejos[sku];
+      await prisma.movimiento.create({
+        data: {
+          tipo: "ENTRADA",
+          productoId: espejo.id,
+          cantidad,
+          saldoResultante: cantidad,
+          motivo: "Existencia inicial del anexo",
+          usuarioId: A,
+        },
+      });
+      await prisma.producto.update({
+        where: { id: espejo.id },
+        data: { existencia: cantidad },
+      });
+    }
+
+    // Una orden de compra en BORRADOR de ejemplo (no toca el stock).
+    await prisma.orden.create({
+      data: {
+        tipo: "COMPRA",
+        estado: "BORRADOR",
+        proveedorId: proveedores["Distribuidora Caribe"].id,
+        notas: "Pedido semanal — revisar precios antes de confirmar",
+        usuarioId: A,
+        lineas: {
+          create: [
+            { productoId: productos["ALM-002"].id, cantidad: 48, precio: 850 },
+            { productoId: productos["LIM-003"].id, cantidad: 24, precio: 210 },
+          ],
+        },
+      },
+    });
   }
 
   console.log("Seed listo:", { admin: admin.email, almacenero: almacenero.email });

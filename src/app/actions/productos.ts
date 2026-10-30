@@ -10,6 +10,7 @@ export type FormState = { error?: string } | undefined;
 function leerDatos(formData: FormData) {
   const fotoCruda = String(formData.get("foto") ?? "").trim();
   return {
+    almacenId: Number(formData.get("almacenId")) || 0,
     sku: String(formData.get("sku") ?? "").trim().toUpperCase(),
     codigoBarras:
       String(formData.get("codigoBarras") ?? "").trim() || null,
@@ -31,6 +32,7 @@ function leerDatos(formData: FormData) {
 }
 
 function validar(d: ReturnType<typeof leerDatos>): string | null {
+  if (!d.almacenId) return "Elige el almacén del producto.";
   if (!d.sku) return "El código (SKU) es obligatorio.";
   if (!d.nombre) return "El nombre es obligatorio.";
   if (!d.categoriaId) return "Elige una categoría.";
@@ -48,15 +50,18 @@ export async function crearProducto(
   const error = validar(d);
   if (error) return { error };
 
-  const existe = await prisma.producto.findUnique({ where: { sku: d.sku } });
-  if (existe) return { error: `Ya hay un producto con el código ${d.sku}.` };
+  const existe = await prisma.producto.findFirst({
+    where: { almacenId: d.almacenId, sku: d.sku },
+  });
+  if (existe)
+    return { error: `Ya hay un producto con el código ${d.sku} en ese almacén.` };
 
   if (d.codigoBarras) {
-    const conEse = await prisma.producto.findUnique({
-      where: { codigoBarras: d.codigoBarras },
+    const conEse = await prisma.producto.findFirst({
+      where: { almacenId: d.almacenId, codigoBarras: d.codigoBarras },
     });
     if (conEse)
-      return { error: `El código de barras ya pertenece a ${conEse.nombre}.` };
+      return { error: `El código de barras ya pertenece a ${conEse.nombre} en ese almacén.` };
   }
 
   // La existencia inicial entra como primer movimiento del libro,
@@ -101,16 +106,17 @@ export async function actualizarProducto(
   if (error) return { error };
 
   const choque = await prisma.producto.findFirst({
-    where: { sku: d.sku, NOT: { id } },
+    where: { almacenId: d.almacenId, sku: d.sku, NOT: { id } },
   });
-  if (choque) return { error: `Ya hay un producto con el código ${d.sku}.` };
+  if (choque)
+    return { error: `Ya hay un producto con el código ${d.sku} en ese almacén.` };
 
   if (d.codigoBarras) {
     const conEse = await prisma.producto.findFirst({
-      where: { codigoBarras: d.codigoBarras, NOT: { id } },
+      where: { almacenId: d.almacenId, codigoBarras: d.codigoBarras, NOT: { id } },
     });
     if (conEse)
-      return { error: `El código de barras ya pertenece a ${conEse.nombre}.` };
+      return { error: `El código de barras ya pertenece a ${conEse.nombre} en ese almacén.` };
   }
 
   await prisma.producto.update({ where: { id }, data: d });

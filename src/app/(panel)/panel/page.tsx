@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { almacenActualId } from "@/lib/almacen-actual";
 import { getUsuarioActual } from "@/lib/dal";
 import { dinero, entero, estadoStock, fechaHora, folio } from "@/lib/formato";
 import { Semaforo, claseBotonPrincipal } from "@/components/ui";
@@ -14,24 +15,29 @@ function inicioDelDia(d: Date) {
 export default async function PanelPage() {
   await connection(); // el panel es "hoy": siempre en vivo
   const usuario = await getUsuarioActual();
+  const almacenId = await almacenActualId();
+  const filtroProd = almacenId ? { almacenId } : {};
   const hoy = inicioDelDia(new Date());
   const hace7 = new Date(hoy);
   hace7.setDate(hace7.getDate() - 6);
 
   const [productos, movimientosHoy, ultimos, semana] = await Promise.all([
     prisma.producto.findMany({
-      where: { activo: true },
+      where: { activo: true, ...filtroProd },
       include: { categoria: true },
       orderBy: { nombre: "asc" },
     }),
-    prisma.movimiento.count({ where: { creadoEn: { gte: hoy } } }),
+    prisma.movimiento.count({
+      where: { creadoEn: { gte: hoy }, ...(almacenId ? { producto: filtroProd } : {}) },
+    }),
     prisma.movimiento.findMany({
+      where: { ...(almacenId ? { producto: filtroProd } : {}) },
       take: 8,
       orderBy: { creadoEn: "desc" },
       include: { producto: true, usuario: true },
     }),
     prisma.movimiento.findMany({
-      where: { creadoEn: { gte: hace7 } },
+      where: { creadoEn: { gte: hace7 }, ...(almacenId ? { producto: filtroProd } : {}) },
       select: { tipo: true, cantidad: true, creadoEn: true },
     }),
   ]);

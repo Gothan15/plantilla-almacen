@@ -10,10 +10,11 @@ export default async function EditarProductoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [producto, categorias, proveedores] = await Promise.all([
+  const [producto, categorias, proveedores, almacenes] = await Promise.all([
     prisma.producto.findUnique({ where: { id: Number(id) } }),
     prisma.categoria.findMany({ orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
+    prisma.almacen.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
   ]);
   if (!producto) notFound();
 
@@ -25,7 +26,9 @@ export default async function EditarProductoPage({
         esEdicion
         categorias={categorias}
         proveedores={proveedores}
+        almacenes={almacenes}
         inicial={{
+          almacenId: producto.almacenId,
           sku: producto.sku,
           codigoBarras: producto.codigoBarras,
           foto: producto.foto,

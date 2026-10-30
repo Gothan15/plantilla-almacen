@@ -8,6 +8,7 @@ import { claseBotonPrincipal, claseBotonSecundario, claseInput, claseLabel } fro
 type Opcion = { id: number; nombre: string };
 
 export type ProductoInicial = {
+  almacenId?: number;
   sku: string;
   codigoBarras?: string | null;
   foto?: string | null;
@@ -30,6 +31,7 @@ export default function ProductoForm({
   inicial,
   categorias,
   proveedores,
+  almacenes,
   esEdicion = false,
   codigoBarrasInicial,
 }: {
@@ -37,6 +39,7 @@ export default function ProductoForm({
   inicial?: ProductoInicial;
   categorias: Opcion[];
   proveedores: Opcion[];
+  almacenes: Opcion[];
   esEdicion?: boolean;
   codigoBarrasInicial?: string;
 }) {
@@ -44,6 +47,32 @@ export default function ProductoForm({
 
   return (
     <form action={dispatch} className="flex max-w-2xl flex-col gap-4">
+      <div>
+        <label htmlFor="almacenId" className={claseLabel}>
+          Almacén *
+        </label>
+        <select
+          id="almacenId"
+          name="almacenId"
+          required
+          defaultValue={inicial?.almacenId ?? ""}
+          className={claseInput}
+        >
+          <option value="" disabled>
+            Elige el almacén...
+          </option>
+          {almacenes.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.nombre}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-tinta-suave">
+          El producto vive en un solo almacén; para mover mercancía se usa un
+          traspaso, que queda en el libro.
+        </p>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-[160px_1fr]">
         <div>
           <label htmlFor="sku" className={claseLabel}>

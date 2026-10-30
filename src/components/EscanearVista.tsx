@@ -3,6 +3,13 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { registrarMovimientoRapido } from "@/app/actions/movimientos";
+import {
+  buscarEnCache,
+  guardarCola,
+  guardarEnCache,
+  leerCola,
+  type ItemCola,
+} from "@/lib/cola";
 import { Semaforo, claseBotonPrincipal, claseInput } from "./ui";
 
 // --- Tipos mínimos de las APIs de escaneo (no están en la lib de TS) ---
@@ -38,6 +45,8 @@ export type ProductoEscaneado = {
   nombre: string;
   categoria: string;
   proveedor: string | null;
+  almacenId: number;
+  almacenNombre: string;
   unidad: string;
   existencia: number;
   stockMinimo: number;
@@ -62,29 +71,129 @@ export default function EscanearVista() {
   const [noEncontrado, setNoEncontrado] = useState<string | null>(null);
   const [camara, setCamara] = useState(false);
   const [avisoCamara, setAvisoCamara] = useState<string | null>(null);
+  const [candidatos, setCandidatos] = useState<ProductoEscaneado[] | null>(null);
+  const [desdeCache, setDesdeCache] = useState(false);
+  const [cola, setCola] = useState<ItemCola[]>([]);
+  const [enLinea, setEnLinea] = useState(true);
+  const [sincronizando, setSincronizando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Envía los movimientos guardados sin conexión, en orden. Los que
+  // el servidor rechaza (p. ej. ya no hay existencia) quedan marcados
+  // con el motivo para que la persona decida.
+  async function procesarCola() {
+    const items = leerCola();
+    if (items.length === 0) return;
+    setSincronizando(true);
+    const restantes: ItemCola[] = [];
+    for (const item of items) {
+      if (item.estado === "error") {
+        restantes.push(item);
+        continue;
+      }
+      try {
+        const r = await fetch("/api/movimientos/rapido", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            productoId: item.productoId,
+            tipo: item.tipo,
+            cantidad: item.cantidad,
+            motivo: item.motivo,
+          }),
+        });
+        const datos = (await r.json()) as { ok?: boolean; error?: string };
+        if (!datos.ok) {
+          restantes.push({
+            ...item,
+            estado: "error",
+            error: datos.error ?? "El servidor lo rechazó.",
+          });
+        }
+      } catch {
+        restantes.push(item); // sigue sin conexión: queda pendiente
+      }
+    }
+    guardarCola(restantes);
+    setCola(restantes);
+    setSincronizando(false);
+  }
+
+  useEffect(() => {
+    const alConectar = () => {
+      setEnLinea(true);
+      void procesarCola();
+    };
+    const alDesconectar = () => setEnLinea(false);
+    window.addEventListener("online", alConectar);
+    window.addEventListener("offline", alDesconectar);
+    const intervalo = setInterval(() => void procesarCola(), 30000);
+    void (async () => {
+      setCola(leerCola());
+      setEnLinea(navigator.onLine);
+      await procesarCola();
+    })();
+    return () => {
+      window.removeEventListener("online", alConectar);
+      window.removeEventListener("offline", alDesconectar);
+      clearInterval(intervalo);
+    };
+    // procesarCola lee localStorage y la red; no es dependencia reactiva.
+  }, []);
+
+  function encolar(item: Omit<ItemCola, "id" | "ts" | "estado">) {
+    const nuevo: ItemCola = {
+      ...item,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      ts: Date.now(),
+      estado: "pendiente",
+    };
+    const items = [...leerCola(), nuevo];
+    guardarCola(items);
+    setCola(items);
+  }
 
   async function buscar(valor: string) {
     const limpio = valor.trim();
     if (!limpio) return;
     setBuscando(true);
     setNoEncontrado(null);
+    setCandidatos(null);
+    setDesdeCache(false);
     try {
       const r = await fetch(
         `/api/productos/por-codigo?codigo=${encodeURIComponent(limpio)}`
       );
-      const datos = (await r.json()) as { producto: ProductoEscaneado | null };
-      if (datos.producto) {
+      const datos = (await r.json()) as { productos: ProductoEscaneado[] };
+      const encontrados = datos.productos ?? [];
+      for (const p of encontrados) {
+        if (p.codigoBarras) guardarEnCache(p.codigoBarras, p);
+        guardarEnCache(p.sku, p);
+      }
+      if (encontrados.length === 1) {
         vibrar();
-        setProducto(datos.producto);
+        setProducto(encontrados[0]);
+      } else if (encontrados.length > 1) {
+        vibrar();
+        setProducto(null);
+        setCandidatos(encontrados);
       } else {
         setProducto(null);
         setNoEncontrado(limpio);
       }
     } catch {
-      setNoEncontrado(null);
-      setProducto(null);
-      setAvisoCamara("No se pudo buscar: revisa la conexión con el servidor.");
+      // Sin conexión: se busca en las fichas guardadas del teléfono.
+      const guardado = buscarEnCache<ProductoEscaneado>(limpio);
+      if (guardado) {
+        vibrar();
+        setProducto(guardado);
+        setDesdeCache(true);
+      } else {
+        setProducto(null);
+        setAvisoCamara(
+          "Sin conexión y este código no está guardado en el teléfono. Búscalo una vez con conexión para poder usarlo sin red."
+        );
+      }
     } finally {
       setBuscando(false);
     }
@@ -172,6 +281,110 @@ export default function EscanearVista() {
         </p>
       </form>
 
+      <div className="mt-3 flex items-center gap-2 text-xs">
+        <span
+          className={`inline-block h-2 w-2 rounded-full ${enLinea ? "bg-verde" : "bg-rojo"}`}
+        />
+        <span className="text-tinta-suave">
+          {enLinea
+            ? "Con conexión al servidor"
+            : "Sin conexión: los movimientos se guardan en el teléfono"}
+        </span>
+      </div>
+
+      {cola.length > 0 && (
+        <div className="mt-3 rounded-lg border border-ambar bg-ambar-claro px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="flex-1 text-sm font-semibold">
+              {cola.length} movimiento(s) esperando sincronización
+            </p>
+            <button
+              type="button"
+              disabled={sincronizando}
+              onClick={() => void procesarCola()}
+              className="rounded-md bg-ambar px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+            >
+              {sincronizando ? "Enviando..." : "Enviar ahora"}
+            </button>
+          </div>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {cola.map((item) => (
+              <li
+                key={item.id}
+                className="flex items-center gap-2 rounded bg-white/70 px-2.5 py-1.5 text-xs"
+              >
+                <span className="font-mono font-bold">
+                  {item.tipo === "SALIDA" ? "−" : item.tipo === "ENTRADA" ? "+" : "="}
+                  {item.cantidad}
+                </span>
+                <span className="min-w-0 flex-1 truncate">
+                  {item.nombre}
+                  {item.estado === "error" && (
+                    <span className="block text-rojo">{item.error}</span>
+                  )}
+                </span>
+                {item.estado === "error" && (
+                  <button
+                    type="button"
+                    className="font-semibold text-ambar"
+                    onClick={() => {
+                      const items = leerCola().map((x) =>
+                        x.id === item.id
+                          ? { ...x, estado: "pendiente" as const, error: undefined }
+                          : x
+                      );
+                      guardarCola(items);
+                      setCola(items);
+                      void procesarCola();
+                    }}
+                  >
+                    Reintentar
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="font-semibold text-rojo"
+                  onClick={() => {
+                    const items = leerCola().filter((x) => x.id !== item.id);
+                    guardarCola(items);
+                    setCola(items);
+                  }}
+                >
+                  Descartar
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {candidatos && (
+        <div className="mt-5 rounded-lg border border-borde bg-white px-4 py-4">
+          <p className="font-semibold">
+            Ese código existe en {candidatos.length} almacenes. ¿Cuál es el
+            tuyo?
+          </p>
+          <div className="mt-3 flex flex-col gap-2">
+            {candidatos.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => {
+                  setProducto(c);
+                  setCandidatos(null);
+                }}
+                className="rounded-md border border-borde px-3 py-2.5 text-left transition hover:border-ambar"
+              >
+                <span className="block font-semibold">{c.almacenNombre}</span>
+                <span className="block text-sm text-tinta-suave">
+                  {c.nombre} · quedan {c.existencia} {c.unidad}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {noEncontrado && (
         <div className="mt-5 rounded-lg border border-borde bg-white px-4 py-4">
           <p className="font-semibold">
@@ -190,10 +403,17 @@ export default function EscanearVista() {
         </div>
       )}
 
+      {producto && desdeCache && (
+        <p className="mt-5 rounded-md bg-ambar-claro px-3 py-2 text-sm">
+          Ficha guardada en el teléfono (sin conexión): la existencia puede
+          haber cambiado en el servidor.
+        </p>
+      )}
       {producto && (
         <FichaProducto
           key={producto.id}
           producto={producto}
+          encolar={encolar}
           alActualizar={(saldo) =>
             setProducto((p) => (p ? { ...p, existencia: saldo } : p))
           }
@@ -217,29 +437,70 @@ export default function EscanearVista() {
 function FichaProducto({
   producto,
   alActualizar,
+  encolar,
 }: {
   producto: ProductoEscaneado;
   alActualizar: (saldo: number) => void;
+  encolar: (item: {
+    productoId: number;
+    codigo: string;
+    nombre: string;
+    tipo: string;
+    cantidad: number;
+    motivo: string | null;
+  }) => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [tipo, setTipo] = useState("SALIDA");
   const [cantidad, setCantidad] = useState("");
   const [resultado, setResultado] = useState<
-    { error: string } | { saldo: number } | null
+    { error: string } | { saldo: number } | { encolado: true } | null
   >(null);
 
   function enviar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const motivo = String(fd.get("motivo") ?? "").trim() || null;
+    const cantidadNum = Math.trunc(Number(fd.get("cantidad")) || 0);
     setResultado(null);
+
+    const guardarEnCola = () => {
+      encolar({
+        productoId: producto.id,
+        codigo: producto.codigoBarras ?? producto.sku,
+        nombre: `${producto.nombre} (${producto.almacenNombre})`,
+        tipo,
+        cantidad: cantidadNum,
+        motivo,
+      });
+      // Saldo optimista en pantalla: el real se confirma al sincronizar.
+      const saldo =
+        tipo === "AJUSTE"
+          ? cantidadNum
+          : tipo === "ENTRADA"
+            ? producto.existencia + cantidadNum
+            : producto.existencia - cantidadNum;
+      alActualizar(saldo);
+      setCantidad("");
+      setResultado({ encolado: true });
+    };
+
+    if (!navigator.onLine) {
+      guardarEnCola();
+      return;
+    }
     startTransition(async () => {
-      const r = await registrarMovimientoRapido(undefined, fd);
-      if (r?.error) {
-        setResultado({ error: r.error });
-      } else if (r?.ok && typeof r.saldo === "number") {
-        alActualizar(r.saldo);
-        setCantidad("");
-        setResultado({ saldo: r.saldo });
+      try {
+        const r = await registrarMovimientoRapido(undefined, fd);
+        if (r?.error) {
+          setResultado({ error: r.error });
+        } else if (r?.ok && typeof r.saldo === "number") {
+          alActualizar(r.saldo);
+          setCantidad("");
+          setResultado({ saldo: r.saldo });
+        }
+      } catch {
+        guardarEnCola(); // se cayó la conexión a mitad de camino
       }
     });
   }
@@ -260,7 +521,8 @@ function FichaProducto({
             <p className="font-mono text-[11px] tracking-widest text-tinta-suave">
               {producto.sku}
               {producto.codigoBarras ? ` · EAN ${producto.codigoBarras}` : ""} ·{" "}
-              {producto.categoria.toUpperCase()}
+              {producto.categoria.toUpperCase()} ·{" "}
+              {producto.almacenNombre.toUpperCase()}
             </p>
             <h2 className="mt-0.5 text-lg leading-snug font-bold">
               {producto.nombre}
@@ -372,6 +634,12 @@ function FichaProducto({
           {resultado && "saldo" in resultado && (
             <p className="rounded-md bg-verde-claro px-3 py-2 text-sm font-semibold text-verde">
               Registrado. Existencia ahora: {resultado.saldo} {producto.unidad}.
+            </p>
+          )}
+          {resultado && "encolado" in resultado && (
+            <p className="rounded-md bg-ambar-claro px-3 py-2 text-sm font-semibold">
+              Sin conexión: quedó guardado en la cola del teléfono y se
+              registrará solo cuando vuelva la red.
             </p>
           )}
         </form>

@@ -9,9 +9,10 @@ export default async function NuevoProductoPage({
   searchParams: Promise<{ codigoBarras?: string }>;
 }) {
   const { codigoBarras } = await searchParams;
-  const [categorias, proveedores] = await Promise.all([
+  const [categorias, proveedores, almacenes] = await Promise.all([
     prisma.categoria.findMany({ orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
     prisma.proveedor.findMany({ orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
+    prisma.almacen.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }),
   ]);
 
   return (
@@ -36,6 +37,7 @@ export default async function NuevoProductoPage({
           accion={crearProducto}
           categorias={categorias}
           proveedores={proveedores}
+          almacenes={almacenes}
           codigoBarrasInicial={codigoBarras}
         />
       )}

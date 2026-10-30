@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { almacenActualId } from "@/lib/almacen-actual";
 import { dinero, entero, fechaCorta } from "@/lib/formato";
 import { Encabezado } from "@/components/ui";
 
@@ -11,14 +12,15 @@ export default async function ReportesPage() {
   const hace30 = new Date(ahora);
   hace30.setDate(hace30.getDate() - 30);
 
+  const almacenId = await almacenActualId();
   const [productos, movimientosMes, ultimosPorProducto] = await Promise.all([
     prisma.producto.findMany({
-      where: { activo: true },
+      where: { activo: true, ...(almacenId ? { almacenId } : {}) },
       include: { categoria: true },
       orderBy: { nombre: "asc" },
     }),
     prisma.movimiento.findMany({
-      where: { creadoEn: { gte: inicioMes } },
+      where: { creadoEn: { gte: inicioMes }, ...(almacenId ? { producto: { almacenId } } : {}) },
       select: { tipo: true, cantidad: true },
     }),
     prisma.movimiento.groupBy({

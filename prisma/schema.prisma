@@ -22,6 +22,18 @@ enum TipoMovimiento {
   ENTRADA
   SALIDA
   AJUSTE
+  TRASPASO
+}
+
+enum TipoOrden {
+  COMPRA
+  VENTA
+}
+
+enum EstadoOrden {
+  BORRADOR
+  CONFIRMADA
+  CANCELADA
 }
 
 model User {
@@ -33,6 +45,20 @@ model User {
   creadoEn  DateTime @default(now())
 
   movimientos Movimiento[]
+  ordenes     Orden[]
+}
+
+// Un local físico: el almacén principal, una sucursal, un depósito.
+// Cada producto vive en UN almacén; para mover mercancía entre
+// locales se usan traspasos (quedan dos asientos en el libro).
+model Almacen {
+  id          Int        @id @default(autoincrement())
+  nombre      String     @unique
+  descripcion String?
+  activo      Boolean    @default(true)
+  creadoEn    DateTime   @default(now())
+
+  productos Producto[]
 }
 
 model Categoria {
@@ -53,14 +79,19 @@ model Proveedor {
 
   productos   Producto[]
   movimientos Movimiento[]
+  ordenes     Orden[]
 }
 
 // El registro principal del almacén. `existencia` es la foto actual;
 // el historial completo vive en Movimiento (el libro de registro).
+// Desde la v2 el SKU y el código de barras son únicos POR ALMACÉN:
+// el mismo producto puede existir en dos locales como dos fichas.
 model Producto {
   id          Int      @id @default(autoincrement())
-  sku         String   @unique // código interno, ej. ALM-001
-  codigoBarras String? @unique // EAN/UPC de fábrica, para el escáner
+  almacenId   Int
+  almacen     Almacen  @relation(fields: [almacenId], references: [id])
+  sku         String // código interno, ej. ALM-001
+  codigoBarras String? // EAN/UPC de fábrica, para el escáner
   foto        String? // foto como data URL (JPEG reducido); en producción, un almacén de objetos
   nombre      String
   descripcion String?
@@ -78,9 +109,13 @@ model Producto {
   creadoEn    DateTime @default(now())
 
   movimientos Movimiento[]
+  lineasOrden OrdenLinea[]
 
+  @@unique([almacenId, sku])
+  @@unique([almacenId, codigoBarras])
   @@index([nombre])
   @@index([categoriaId])
+  @@index([almacenId])
 }
 
 // Libro de movimientos: cada entrada, salida o ajuste queda firmado
@@ -96,10 +131,48 @@ model Movimiento {
   motivo          String?
   proveedorId     Int?
   proveedor       Proveedor?     @relation(fields: [proveedorId], references: [id])
+  ordenId         Int?
+  orden           Orden?         @relation(fields: [ordenId], references: [id])
   usuarioId       Int
   usuario         User           @relation(fields: [usuarioId], references: [id])
   creadoEn        DateTime       @default(now())
 
   @@index([productoId, creadoEn])
   @@index([creadoEn])
+}
+
+// Órdenes de compra (a proveedores) y de venta (a clientes). Nacen en
+// BORRADOR sin tocar el stock; al CONFIRMAR se aplica cada línea como
+// movimiento del libro (entrada en compras, salida en ventas) y la
+// orden queda cerrada. Cancelar solo se puede en borrador.
+model Orden {
+  id           Int         @id @default(autoincrement()) // = número de orden
+  tipo         TipoOrden
+  estado       EstadoOrden @default(BORRADOR)
+  proveedorId  Int?
+  proveedor    Proveedor?  @relation(fields: [proveedorId], references: [id])
+  cliente      String? // solo ventas: nombre libre del cliente
+  notas        String?
+  usuarioId    Int
+  usuario      User        @relation(fields: [usuarioId], references: [id])
+  creadoEn     DateTime    @default(now())
+  confirmadaEn DateTime?
+
+  lineas      OrdenLinea[]
+  movimientos Movimiento[]
+
+  @@index([tipo, estado])
+  @@index([creadoEn])
+}
+
+model OrdenLinea {
+  id          Int     @id @default(autoincrement())
+  ordenId     Int
+  orden       Orden   @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+  productoId  Int
+  producto    Producto @relation(fields: [productoId], references: [id])
+  cantidad    Int
+  precio      Decimal @db.Decimal(12, 2) // costo en compras, venta en ventas
+
+  @@index([ordenId])
 }

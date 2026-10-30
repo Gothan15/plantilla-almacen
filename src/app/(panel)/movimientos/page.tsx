@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { almacenActualId } from "@/lib/almacen-actual";
 import { fechaHora, folio } from "@/lib/formato";
 import { Encabezado, claseBotonPrincipal } from "@/components/ui";
 
@@ -11,12 +12,14 @@ export default async function MovimientosPage({
   searchParams: Promise<{ tipo?: string; producto?: string }>;
 }) {
   const { tipo, producto } = await searchParams;
+  const almacenId = await almacenActualId();
 
   const [productos, movimientos, total] = await Promise.all([
     prisma.producto.findMany({ orderBy: { nombre: "asc" }, select: { id: true, sku: true, nombre: true } }),
     prisma.movimiento.findMany({
       where: {
-        ...(tipo ? { tipo: tipo as "ENTRADA" | "SALIDA" | "AJUSTE" } : {}),
+        ...(tipo ? { tipo: tipo as "ENTRADA" | "SALIDA" | "AJUSTE" | "TRASPASO" } : {}),
+        ...(almacenId && !producto ? { producto: { almacenId } } : {}),
         ...(producto ? { productoId: Number(producto) } : {}),
       },
       orderBy: { creadoEn: "desc" },
@@ -46,6 +49,7 @@ export default async function MovimientosPage({
           <option value="ENTRADA">Solo entradas</option>
           <option value="SALIDA">Solo salidas</option>
           <option value="AJUSTE">Solo ajustes</option>
+          <option value="TRASPASO">Solo traspasos</option>
         </select>
         <select name="producto" defaultValue={producto ?? ""} className="w-auto max-w-full rounded-md border border-borde bg-white px-3 py-2 text-sm">
           <option value="">Todos los productos</option>
@@ -92,7 +96,9 @@ export default async function MovimientosPage({
                         ? "bg-verde-claro text-verde"
                         : m.tipo === "SALIDA"
                           ? "bg-rojo-claro text-rojo"
-                          : "bg-ambar-claro text-ambar"
+                          : m.tipo === "TRASPASO"
+                            ? "bg-tinta text-white"
+                            : "bg-ambar-claro text-ambar"
                     }`}
                   >
                     {m.tipo}

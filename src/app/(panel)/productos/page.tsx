@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { almacenActualId } from "@/lib/almacen-actual";
 import { dinero, estadoStock } from "@/lib/formato";
 import { Encabezado, Semaforo, claseBotonPrincipal, claseInput } from "@/components/ui";
 
@@ -9,11 +10,13 @@ export default async function ProductosPage({
   searchParams: Promise<{ q?: string; categoria?: string; estado?: string }>;
 }) {
   const { q, categoria, estado } = await searchParams;
+  const almacenId = await almacenActualId();
 
   const [categorias, productos] = await Promise.all([
     prisma.categoria.findMany({ orderBy: { nombre: "asc" } }),
     prisma.producto.findMany({
       where: {
+        ...(almacenId ? { almacenId } : {}),
         ...(q
           ? {
               OR: [
@@ -25,8 +28,8 @@ export default async function ProductosPage({
           : {}),
         ...(categoria ? { categoriaId: Number(categoria) } : {}),
       },
-      include: { categoria: true, proveedor: true },
-      orderBy: { nombre: "asc" },
+      include: { categoria: true, proveedor: true, almacen: true },
+      orderBy: [{ almacenId: "asc" }, { nombre: "asc" }],
     }),
   ]);
 
@@ -86,6 +89,7 @@ export default async function ProductosPage({
             <tr className="border-b border-borde bg-papel text-xs tracking-wide text-tinta-suave uppercase">
               <th className="px-4 py-3 font-semibold">Código</th>
               <th className="px-4 py-3 font-semibold">Producto</th>
+              <th className="px-4 py-3 font-semibold">Almacén</th>
               <th className="px-4 py-3 font-semibold">Categoría</th>
               <th className="px-4 py-3 font-semibold">Ubicación</th>
               <th className="px-4 py-3 text-right font-semibold">Existencia</th>
@@ -121,6 +125,7 @@ export default async function ProductosPage({
                     </span>
                   </div>
                 </td>
+                <td className="px-4 py-2.5">{p.almacen.nombre}</td>
                 <td className="px-4 py-2.5">{p.categoria.nombre}</td>
                 <td className="px-4 py-2.5 font-mono text-xs">{p.ubicacion ?? "—"}</td>
                 <td className="px-4 py-2.5 text-right font-mono font-semibold">

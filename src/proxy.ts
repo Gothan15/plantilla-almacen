@@ -8,6 +8,8 @@ import { decrypt } from "@/lib/sesion-core";
 const RUTAS_PROTEGIDAS = [
   "/panel",
   "/escanear",
+  "/ordenes",
+  "/almacenes",
   "/productos",
   "/movimientos",
   "/categorias",

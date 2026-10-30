@@ -11,17 +11,21 @@ export type ProductoOpcion = {
   nombre: string;
   unidad: string;
   existencia: number;
+  almacenId: number;
+  almacenNombre: string;
 };
 
 export default function MovimientoForm({
   productos,
   proveedores,
+  almacenes,
   productoFijo,
   volver,
   tipoInicial,
 }: {
   productos: ProductoOpcion[];
   proveedores: { id: number; nombre: string }[];
+  almacenes: { id: number; nombre: string }[];
   productoFijo?: ProductoOpcion;
   volver?: string;
   tipoInicial?: string;
@@ -40,12 +44,13 @@ export default function MovimientoForm({
 
       <div>
         <span className={claseLabel}>Tipo de movimiento</span>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {(
             [
               { valor: "ENTRADA", texto: "Entrada", activo: "border-verde bg-verde-claro text-verde" },
               { valor: "SALIDA", texto: "Salida", activo: "border-rojo bg-rojo-claro text-rojo" },
               { valor: "AJUSTE", texto: "Ajuste", activo: "border-ambar bg-ambar-claro text-ambar" },
+              { valor: "TRASPASO", texto: "Traspaso", activo: "border-tinta bg-tinta text-white" },
             ] as const
           ).map((op) => (
             <label
@@ -92,7 +97,8 @@ export default function MovimientoForm({
           >
             {productos.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.sku} — {p.nombre} (quedan {p.existencia} {p.unidad})
+                {p.sku} — {p.nombre} · {p.almacenNombre} (quedan {p.existencia}{" "}
+                {p.unidad})
               </option>
             ))}
           </select>
@@ -128,6 +134,37 @@ export default function MovimientoForm({
         )}
       </div>
 
+      {tipo === "TRASPASO" && (
+        <div>
+          <label htmlFor="almacenDestinoId" className={claseLabel}>
+            Almacén de destino *
+          </label>
+          <select
+            id="almacenDestinoId"
+            name="almacenDestinoId"
+            required
+            className={claseInput}
+            defaultValue=""
+          >
+            <option value="" disabled>
+              Elige el destino...
+            </option>
+            {almacenes
+              .filter((a) => a.id !== producto?.almacenId)
+              .map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.nombre}
+                </option>
+              ))}
+          </select>
+          <p className="mt-1 text-xs text-tinta-suave">
+            Quedan dos asientos en el libro: la salida aquí y la entrada en el
+            destino. Si el producto no existe allí, se crea su ficha con los
+            mismos datos.
+          </p>
+        </div>
+      )}
+
       {tipo === "ENTRADA" && (
         <div>
           <label htmlFor="proveedorId" className={claseLabel}>
@@ -157,7 +194,9 @@ export default function MovimientoForm({
               ? "Ej. Factura 1123, compra semanal"
               : tipo === "SALIDA"
                 ? "Ej. Vale de salida para la tienda"
-                : "Ej. Conteo físico de fin de mes"
+                : tipo === "TRASPASO"
+                  ? "Ej. Reposición del anexo (opcional)"
+                  : "Ej. Conteo físico de fin de mes"
           }
         />
       </div>

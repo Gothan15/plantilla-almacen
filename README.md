@@ -56,6 +56,27 @@ cuadrar el almacén contra el papel, el libro está aquí.
 - **Usuarios** (solo administrador): crear, cambiar rol y
   contraseña, con la regla de que quien tiene movimientos firmados
   no se elimina.
+- **Varios almacenes** (v2): cada producto vive en un local; el
+  panel tiene un selector «Viendo» que filtra productos, libro,
+  panel y reportes por almacén (o muestra todos). Los locales los
+  crea el administrador; uno con stock dentro no se puede
+  desactivar.
+- **Traspasos entre almacenes** (v2): mover mercancía de un local a
+  otro deja dos asientos TRASPASO enlazados en el libro (la salida
+  aquí y la entrada allá). Si el producto no existe en el destino,
+  se crea su ficha con los mismos datos.
+- **Órdenes de compra y de venta** (v2): documentos con líneas que
+  nacen en BORRADOR sin tocar el stock. Al confirmar, cada línea se
+  aplica como asiento del libro (entrada en compras, salida en
+  ventas) y la orden queda cerrada con sus asientos a la vista. Una
+  venta que pida más de lo que hay no se puede confirmar.
+- **Modo sin conexión en el escáner** (v2): si se cae la red, la
+  página de escaneo guarda los movimientos en una cola en el propio
+  teléfono y los envía solos al volver la conexión; los que el
+  servidor rechace quedan marcados con el motivo para decidir. Las
+  fichas ya vistas se guardan en el teléfono, así que un código ya
+  conocido se puede identificar y registrar sin red. Si un código
+  existe en varios almacenes, el escáner pregunta cuál es el tuyo.
 
 ## Cómo se adapta a otro negocio
 
@@ -86,9 +107,11 @@ Usuarios tras el seed:
 | admin@almacen.cu | admin123 | Administrador |
 | almacen@almacen.cu | almacen123 | Almacenero |
 
-El seed trae un almacén de ejemplo ya trabajando: 13 productos en 5
-categorías, 4 proveedores y el libro de la última semana poblado,
-con un producto agotado y dos en stock bajo para ver las alertas.
+El seed trae el negocio de ejemplo ya trabajando: dos almacenes
+(el Central y un Depósito Anexo con dos productos espejo), 13
+productos en 5 categorías, 4 proveedores, el libro de la última
+semana poblado —con un producto agotado y dos en stock bajo para
+ver las alertas— y una orden de compra en borrador de ejemplo.
 
 ## Tecnología
 
@@ -99,12 +122,14 @@ panel son CSS.
 
 ## Lo que falta (siendo honesto)
 
-- La app móvil necesita conexión con el servidor (WiFi o internet);
-  el modo sin conexión con cola de movimientos queda para la v2.
+- La cola sin conexión guarda el trabajo del escáner, pero la app
+  sigue necesitando conexión para consultar fichas nuevas y para el
+  resto del panel; no es un modo offline completo con réplica local.
 - No lleva control por lotes ni fechas de vencimiento; para
   alimentos perecederos habría que añadir el modelo Lote.
 - Los reportes son del mes en curso; un selector de rango de fechas
   es el siguiente paso natural.
 - Sin pruebas automatizadas todavía; la lógica crítica (que ninguna
-  salida deje el stock en negativo) está concentrada en
-  `src/app/actions/movimientos.ts` para poder probarla primero.
+  salida deje el stock en negativo, traspasos, confirmación de
+  órdenes) está concentrada en `src/lib/movimientos-core.ts` para
+  poder probarla primero.
