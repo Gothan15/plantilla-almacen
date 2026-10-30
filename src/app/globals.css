@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+/*
+  Diseño "libro de almacén": papel cálido, tinta carbón, ámbar de
+  seguridad y mono para códigos y cifras, como las etiquetas y los
+  libros de registro de un almacén de verdad. Ver INSPIRACION.md.
+*/
+
+@theme inline {
+  --color-papel: #f3efe7;
+  --color-papel-oscuro: #e9e3d6;
+  --color-tinta: #211d18;
+  --color-tinta-suave: #5c554a;
+  --color-borde: #ddd5c5;
+  --color-carbon: #23201c;
+  --color-carbon-suave: #322e29;
+  --color-ambar: #d97706;
+  --color-ambar-claro: #fef3c7;
+  --color-verde: #2f7d4f;
+  --color-verde-claro: #e3efe4;
+  --color-rojo: #b3402a;
+  --color-rojo-claro: #f9e8e2;
+
+  --font-sans: var(--font-archivo);
+  --font-mono: var(--font-jetbrains);
+}
+
+body {
+  background: var(--color-papel);
+  color: var(--color-tinta);
+  font-family: var(--font-archivo), system-ui, sans-serif;
+}
+
+/* Línea de corte, como las de las etiquetas de almacén */
+.corte {
+  background-image: linear-gradient(
+    to right,
+    var(--color-borde) 45%,
+    transparent 45%
+  );
+  background-size: 9px 1px;
+  background-repeat: repeat-x;
+  height: 1px;
+}

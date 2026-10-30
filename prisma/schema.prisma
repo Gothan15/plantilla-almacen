@@ -1,0 +1,103 @@
+// Plantilla de almacén e inventario.
+// La idea: copiar esta plantilla para cualquier negocio que necesite
+// controlar existencias (almacén, tienda, taller, depósito...) y
+// ajustar los modelos al caso concreto.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  ADMIN
+  ALMACENERO
+}
+
+enum TipoMovimiento {
+  ENTRADA
+  SALIDA
+  AJUSTE
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  email     String   @unique
+  password  String // hash con bcrypt, nunca texto plano
+  rol       Rol      @default(ALMACENERO)
+  creadoEn  DateTime @default(now())
+
+  movimientos Movimiento[]
+}
+
+model Categoria {
+  id          Int        @id @default(autoincrement())
+  nombre      String     @unique
+  descripcion String?
+  productos   Producto[]
+}
+
+model Proveedor {
+  id       Int        @id @default(autoincrement())
+  nombre   String
+  contacto String?
+  telefono String?
+  email    String?
+  notas    String?
+  creadoEn DateTime   @default(now())
+
+  productos   Producto[]
+  movimientos Movimiento[]
+}
+
+// El registro principal del almacén. `existencia` es la foto actual;
+// el historial completo vive en Movimiento (el libro de registro).
+model Producto {
+  id          Int      @id @default(autoincrement())
+  sku         String   @unique // código interno, ej. ALM-001
+  nombre      String
+  descripcion String?
+  categoriaId Int
+  categoria   Categoria @relation(fields: [categoriaId], references: [id])
+  proveedorId Int?
+  proveedor   Proveedor? @relation(fields: [proveedorId], references: [id])
+  unidad      String   @default("u") // u, kg, L, caja, saco...
+  precioCosto Decimal  @default(0) @db.Decimal(12, 2)
+  precioVenta Decimal  @default(0) @db.Decimal(12, 2)
+  existencia  Int      @default(0)
+  stockMinimo Int      @default(0) // por debajo de esto salta la alerta
+  ubicacion   String? // pasillo/estante, ej. "A-3"
+  activo      Boolean  @default(true)
+  creadoEn    DateTime @default(now())
+
+  movimientos Movimiento[]
+
+  @@index([nombre])
+  @@index([categoriaId])
+}
+
+// Libro de movimientos: cada entrada, salida o ajuste queda firmado
+// por el usuario que lo hizo, con el saldo que quedó después.
+// `cantidad` va con signo: + entradas, − salidas, ajuste = diferencia.
+model Movimiento {
+  id              Int            @id @default(autoincrement()) // = folio
+  tipo            TipoMovimiento
+  productoId      Int
+  producto        Producto       @relation(fields: [productoId], references: [id])
+  cantidad        Int
+  saldoResultante Int
+  motivo          String?
+  proveedorId     Int?
+  proveedor       Proveedor?     @relation(fields: [proveedorId], references: [id])
+  usuarioId       Int
+  usuario         User           @relation(fields: [usuarioId], references: [id])
+  creadoEn        DateTime       @default(now())
+
+  @@index([productoId, creadoEn])
+  @@index([creadoEn])
+}
